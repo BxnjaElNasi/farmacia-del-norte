@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -96,7 +97,7 @@ async function main() {
     }
   });
 
-  await prisma.sale.create({
+  const sale = await prisma.sale.create({
     data: {
       total: 96.0,
       status: 'COMPLETADO',
@@ -114,7 +115,7 @@ async function main() {
     }
   });
 
-  console.log('Seed completed:', { admin: admin.email, supplier: supplier.name });
+  console.log('Seed completed:', { admin: admin.email, supplier: supplier.name, sale: sale.id });
 }
 
 main().finally(async () => {

@@ -27,18 +27,21 @@ enum Role {
 }
 
 model Product {
-  id          String   @id @default(cuid())
-  sku         String   @unique
+  id          String      @id @default(cuid())
+  sku         String      @unique
   name        String
   category    String
   description String?
   price       Decimal
   cost        Decimal
-  stock       Int      @default(0)
-  minimum     Int      @default(0)
+  stock       Int         @default(0)
+  minimum     Int         @default(0)
   status      ProductStatus @default(ACTIVO)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  supplierId  String?
+  supplier    Supplier?   @relation(fields: [supplierId], references: [id])
+  saleItems   SaleItem[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 }
 
 enum ProductStatus {
@@ -49,34 +52,51 @@ enum ProductStatus {
 }
 
 model Supplier {
-  id        String   @id @default(cuid())
-  name      String
+  id        String    @id @default(cuid())
+  name      String    @unique
   contact   String
   phone     String
   category  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
 
 model Customer {
   id        String   @id @default(cuid())
   name      String
   phone     String?
-  email     String?
+  email     String?  @unique
+  sales     Sale[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Sale {
-  id         String   @id @default(cuid())
-  total      Decimal
-  status     SaleStatus @default(COMPLETADO)
-  customerId String?
-  createdAt  DateTime @default(now())
+  id            String      @id @default(cuid())
+  total         Decimal
+  status        SaleStatus  @default(COMPLETADO)
+  paymentMethod String?
+  customerId    String?
+  customer      Customer?   @relation(fields: [customerId], references: [id])
+  items         SaleItem[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 }
 
 enum SaleStatus {
   COMPLETADO
   PENDIENTE
   CANCELADO
+}
+
+model SaleItem {
+  id        String   @id @default(cuid())
+  saleId    String
+  productId String
+  quantity  Int
+  unitPrice Decimal
+  sale      Sale     @relation(fields: [saleId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
+  createdAt DateTime @default(now())
 }
