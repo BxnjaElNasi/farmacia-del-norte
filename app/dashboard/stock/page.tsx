@@ -1,14 +1,18 @@
+import { prisma } from '@/lib/prisma';
+import { requireSession } from '@/lib/session';
 import { DashboardShell } from '@/components/dashboard-shell';
 import { AlertTriangle, Boxes } from 'lucide-react';
 
-const stockAlerts = [
-  { product: 'Amoxicilina 500mg', current: 12, minimum: 20, unit: 'cajas' },
-  { product: 'Vitamina C 1000mg', current: 42, minimum: 45, unit: 'frascos' },
-  { product: 'Jabón antiséptico', current: 18, minimum: 30, unit: 'unidades' },
-  { product: 'Guantes nitrílicos', current: 85, minimum: 100, unit: 'pares' }
-];
+export default async function StockPage() {
+  requireSession();
 
-export default function StockPage() {
+  const products = await prisma.product.findMany({
+    orderBy: { stock: 'asc' },
+    take: 6
+  });
+
+  const stockAlerts = products.filter((product) => product.stock <= product.minimum || product.status !== 'ACTIVO');
+
   return (
     <DashboardShell title="Control de stock">
       <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
@@ -21,20 +25,24 @@ export default function StockPage() {
           </div>
 
           <div className="space-y-4">
-            {stockAlerts.map((item) => (
-              <div key={item.product} className="rounded-2xl bg-slate-50 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-slate-900">{item.product}</p>
-                    <p className="text-sm text-slate-500">Mínimo recomendado: {item.minimum} {item.unit}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xl font-bold text-slate-900">{item.current}</p>
-                    <p className="text-xs text-slate-500">Actual</p>
+            {stockAlerts.length > 0 ? (
+              stockAlerts.map((item) => (
+                <div key={item.id} className="rounded-2xl bg-slate-50 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-slate-900">{item.name}</p>
+                      <p className="text-sm text-slate-500">Mínimo recomendado: {item.minimum} unidades</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl font-bold text-slate-900">{item.stock}</p>
+                      <p className="text-xs text-slate-500">Actual</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <div className="rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-700">No hay alertas de stock en este momento.</div>
+            )}
           </div>
         </div>
 

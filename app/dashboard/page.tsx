@@ -1,22 +1,40 @@
+import { redirect } from 'next/navigation';
+import { prisma } from '@/lib/prisma';
+import { requireSession } from '@/lib/session';
 import { DashboardShell } from '@/components/dashboard-shell';
 import { StatCard } from '@/components/stat-card';
 import { ArrowUpRight, Package, ShoppingCart, Truck, Users } from 'lucide-react';
 
-const stats = [
-  { title: 'Productos', value: '2,468', change: '+12.4%', icon: Package },
-  { title: 'Ventas', value: 'S/. 186,420', change: '+18.2%', icon: ShoppingCart },
-  { title: 'Proveedores', value: '84', change: '+5.1%', icon: Truck },
-  { title: 'Clientes', value: '8,900', change: '+9.7%', icon: Users }
-];
+export default async function DashboardPage() {
+  requireSession();
 
-const recentSales = [
-  { product: 'Vitamina C 500mg', buyer: 'María López', amount: 'S/. 48.00', status: 'Pagado' },
-  { product: 'Paracetamol 500mg', buyer: 'José Ruiz', amount: 'S/. 18.50', status: 'Entregado' },
-  { product: 'Ibuprofeno 400mg', buyer: 'Ana García', amount: 'S/. 24.30', status: 'Pagado' },
-  { product: 'Jabón antiséptico', buyer: 'Laura Torres', amount: 'S/. 12.80', status: 'Pendiente' }
-];
+  const [totalProducts, totalSales, totalSuppliers, totalCustomers] = await Promise.all([
+    prisma.product.count(),
+    prisma.sale.aggregate({ _sum: { total: true } }),
+    prisma.supplier.count(),
+    prisma.customer.count()
+  ]);
 
-export default function DashboardPage() {
+  const recentSales = await prisma.sale.findMany({
+    take: 4,
+    orderBy: { createdAt: 'desc' },
+    include: {
+      customer: true,
+      items: {
+        include: {
+          product: true
+        }
+      }
+    }
+  });
+
+  const stats = [
+    { title: 'Productos', value: totalProducts.toString(), change: '+12.4%', icon: Package },
+    { title: 'Ventas', value: `S/. ${Number(totalSales._sum.total ?? 0).toFixed(2)}`, change: '+18.2%', icon: ShoppingCart },
+    { title: 'Proveedores', value: totalSuppliers.toString(), change: '+5.1%', icon: Truck },
+    { title: 'Clientes', value: totalCustomers.toString(), change: '+9.7%', icon: Users }
+  ];
+
   return (
     <DashboardShell title="Resumen general">
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
@@ -35,18 +53,21 @@ export default function DashboardPage() {
           </div>
 
           <div className="space-y-4">
-            {recentSales.map((sale) => (
-              <div key={sale.product} className="flex items-center justify-between rounded-2xl bg-slate-50 p-4">
-                <div>
-                  <p className="font-semibold text-slate-900">{sale.product}</p>
-                  <p className="text-sm text-slate-500">{sale.buyer}</p>
+            {recentSales.map((sale) => {
+              const firstItem = sale.items[0];
+              return (
+                <div key={sale.id} className="flex items-center justify-between rounded-2xl bg-slate-50 p-4">
+                  <div>
+                    <p className="font-semibold text-slate-900">{firstItem?.product?.name ?? 'Venta'}</p>
+                    <p className="text-sm text-slate-500">{sale.customer?.name ?? 'Cliente'}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-slate-900">S/. {Number(sale.total).toFixed(2)}</p>
+                    <p className="text-xs text-emerald-600">{sale.status}</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-semibold text-slate-900">{sale.amount}</p>
-                  <p className="text-xs text-emerald-600">{sale.status}</p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 

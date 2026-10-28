@@ -1,14 +1,19 @@
+import { redirect } from 'next/navigation';
+import { prisma } from '@/lib/prisma';
+import { requireSession } from '@/lib/session';
 import { DashboardShell } from '@/components/dashboard-shell';
 import { PackageSearch, Pencil, Trash2 } from 'lucide-react';
 
-const products = [
-  { name: 'Paracetamol 500mg', sku: 'PAR-500', category: 'Analgésicos', stock: 128, price: 'S/. 18.50', status: 'Disponible' },
-  { name: 'Vitamina C 1000mg', sku: 'VIT-1000', category: 'Vitaminas', stock: 42, price: 'S/. 26.90', status: 'Bajo stock' },
-  { name: 'Amoxicilina 500mg', sku: 'AMX-500', category: 'Antibióticos', stock: 12, price: 'S/. 32.40', status: 'Crítico' },
-  { name: 'Ibuprofeno 400mg', sku: 'IBU-400', category: 'Dolor e inflamación', stock: 80, price: 'S/. 24.00', status: 'Disponible' }
-];
+export default async function ProductsPage() {
+  requireSession();
 
-export default function ProductsPage() {
+  const products = await prisma.product.findMany({
+    orderBy: { createdAt: 'desc' },
+    include: {
+      supplier: true
+    }
+  });
+
   return (
     <DashboardShell title="Productos">
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-soft">
@@ -33,22 +38,24 @@ export default function ProductsPage() {
                 <th className="py-3 pr-6">Stock</th>
                 <th className="py-3 pr-6">Precio</th>
                 <th className="py-3 pr-6">Estado</th>
+                <th className="py-3 pr-6">Proveedor</th>
                 <th className="py-3 pr-6">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {products.map((product) => (
-                <tr key={product.sku} className="border-b border-slate-100 text-sm text-slate-700">
+                <tr key={product.id} className="border-b border-slate-100 text-sm text-slate-700">
                   <td className="py-4 pr-6 font-semibold text-slate-900">{product.name}</td>
                   <td className="py-4 pr-6">{product.sku}</td>
                   <td className="py-4 pr-6">{product.category}</td>
                   <td className="py-4 pr-6">{product.stock}</td>
-                  <td className="py-4 pr-6">{product.price}</td>
+                  <td className="py-4 pr-6">S/. {Number(product.price).toFixed(2)}</td>
                   <td className="py-4 pr-6">
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${product.status === 'Disponible' ? 'bg-emerald-100 text-emerald-700' : product.status === 'Bajo stock' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${product.status === 'ACTIVO' ? 'bg-emerald-100 text-emerald-700' : product.status === 'BAJO_STOCK' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
                       {product.status}
                     </span>
                   </td>
+                  <td className="py-4 pr-6">{product.supplier?.name ?? 'Sin proveedor'}</td>
                   <td className="py-4 pr-6">
                     <div className="flex items-center gap-2">
                       <button className="rounded-full border border-slate-200 p-2 text-slate-600 transition hover:border-brand-300 hover:text-brand-700"><Pencil size={14} /></button>

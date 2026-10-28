@@ -1,15 +1,19 @@
+import { prisma } from '@/lib/prisma';
+import { requireSession } from '@/lib/session';
 import { DashboardShell } from '@/components/dashboard-shell';
 
-const reportData = [
-  { label: 'Ene', value: 52 },
-  { label: 'Feb', value: 68 },
-  { label: 'Mar', value: 60 },
-  { label: 'Abr', value: 75 },
-  { label: 'May', value: 82 },
-  { label: 'Jun', value: 90 }
-];
+export default async function ReportsPage() {
+  requireSession();
 
-export default function ReportsPage() {
+  const reportData = [
+    { label: 'Ene', value: 52 },
+    { label: 'Feb', value: 68 },
+    { label: 'Mar', value: 60 },
+    { label: 'Abr', value: 75 },
+    { label: 'May', value: 82 },
+    { label: 'Jun', value: 90 }
+  ];
+
   return (
     <DashboardShell title="Reportes">
       <div className="grid gap-6 lg:grid-cols-2">

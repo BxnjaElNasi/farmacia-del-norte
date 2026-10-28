@@ -1,14 +1,26 @@
+import { prisma } from '@/lib/prisma';
+import { requireSession } from '@/lib/session';
 import { DashboardShell } from '@/components/dashboard-shell';
 import { IndianRupee, ShoppingBag } from 'lucide-react';
 
-const sales = [
-  { id: 'FV-1024', product: 'Vitamina C 500mg', qty: 3, customer: 'María López', payment: 'Tarjeta', total: 'S/. 96.00', status: 'Completado' },
-  { id: 'FV-1025', product: 'Paracetamol 500mg', qty: 2, customer: 'Carlos Díaz', payment: 'Efectivo', total: 'S/. 37.00', status: 'Completado' },
-  { id: 'FV-1026', product: 'Ibuprofeno 400mg', qty: 5, customer: 'Ana García', payment: 'Yape', total: 'S/. 120.00', status: 'Pendiente' },
-  { id: 'FV-1027', product: 'Amoxicilina 500mg', qty: 1, customer: 'Pedro Soto', payment: 'Transferencia', total: 'S/. 32.40', status: 'Completado' }
-];
+export default async function SalesPage() {
+  requireSession();
 
-export default function SalesPage() {
+  const sales = await prisma.sale.findMany({
+    orderBy: { createdAt: 'desc' },
+    take: 6,
+    include: {
+      customer: true,
+      items: {
+        include: {
+          product: true
+        }
+      }
+    }
+  });
+
+  const totalSales = sales.reduce((sum, sale) => sum + Number(sale.total), 0);
+
   return (
     <DashboardShell title="Ventas">
       <div className="grid gap-5 md:grid-cols-2">
@@ -19,7 +31,7 @@ export default function SalesPage() {
             </div>
             <div>
               <p className="text-sm text-slate-500">Ventas del día</p>
-              <p className="text-3xl font-black text-slate-900">S/. 8,420</p>
+              <p className="text-3xl font-black text-slate-900">S/. {totalSales.toFixed(2)}</p>
             </div>
           </div>
         </div>
@@ -31,7 +43,7 @@ export default function SalesPage() {
             </div>
             <div>
               <p className="text-sm text-slate-500">Ticket promedio</p>
-              <p className="text-3xl font-black text-slate-900">S/. 68.50</p>
+              <p className="text-3xl font-black text-slate-900">S/. {(sales.length ? totalSales / sales.length : 0).toFixed(2)}</p>
             </div>
           </div>
         </div>
@@ -57,21 +69,24 @@ export default function SalesPage() {
               </tr>
             </thead>
             <tbody>
-              {sales.map((sale) => (
-                <tr key={sale.id} className="border-b border-slate-100 text-sm text-slate-700">
-                  <td className="py-4 pr-6 font-semibold text-slate-900">{sale.id}</td>
-                  <td className="py-4 pr-6">{sale.product}</td>
-                  <td className="py-4 pr-6">{sale.customer}</td>
-                  <td className="py-4 pr-6">{sale.qty}</td>
-                  <td className="py-4 pr-6">{sale.payment}</td>
-                  <td className="py-4 pr-6">{sale.total}</td>
-                  <td className="py-4 pr-6">
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${sale.status === 'Completado' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                      {sale.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              {sales.map((sale) => {
+                const firstItem = sale.items[0];
+                return (
+                  <tr key={sale.id} className="border-b border-slate-100 text-sm text-slate-700">
+                    <td className="py-4 pr-6 font-semibold text-slate-900">{sale.id.slice(0, 8).toUpperCase()}</td>
+                    <td className="py-4 pr-6">{firstItem?.product?.name ?? 'Venta'}</td>
+                    <td className="py-4 pr-6">{sale.customer?.name ?? 'Cliente'}</td>
+                    <td className="py-4 pr-6">{sale.items.reduce((total, item) => total + item.quantity, 0)}</td>
+                    <td className="py-4 pr-6">{sale.paymentMethod}</td>
+                    <td className="py-4 pr-6">S/. {Number(sale.total).toFixed(2)}</td>
+                    <td className="py-4 pr-6">
+                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${sale.status === 'COMPLETADO' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                        {sale.status}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
