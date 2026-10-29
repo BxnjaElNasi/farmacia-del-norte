@@ -1,38 +1,41 @@
-import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
-import { requireSession } from '@/lib/session';
 import { DashboardShell } from '@/components/dashboard-shell';
 import { StatCard } from '@/components/stat-card';
-import { ArrowUpRight, Package, ShoppingCart, Truck, Users } from 'lucide-react';
+import { ArrowUpRight, Package, ShoppingCart, Store, Users } from 'lucide-react';
 
 export default async function DashboardPage() {
-  requireSession();
-
-  const [totalProducts, totalSales, totalSuppliers, totalCustomers] = await Promise.all([
+  const [totalProducts, totalBranches, totalSales, totalCustomers] = await Promise.all([
     prisma.product.count(),
-    prisma.sale.aggregate({ _sum: { total: true } }),
-    prisma.supplier.count(),
+    prisma.branch.count(),
+    prisma.sale.count({ where: { createdAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) } } }),
     prisma.customer.count()
   ]);
+
+  const salesToday = await prisma.sale.aggregate({
+    where: { createdAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) } },
+    _sum: { total: true }
+  });
 
   const recentSales = await prisma.sale.findMany({
     take: 4,
     orderBy: { createdAt: 'desc' },
     include: {
       customer: true,
-      items: {
-        include: {
-          product: true
-        }
-      }
+      items: { include: { product: true } },
+      branch: true
     }
+  });
+
+  const lowStockItems = await prisma.product.findMany({
+    where: { status: 'BAJO_STOCK' },
+    take: 3
   });
 
   const stats = [
     { title: 'Productos', value: totalProducts.toString(), change: '+12.4%', icon: Package },
-    { title: 'Ventas', value: `S/. ${Number(totalSales._sum.total ?? 0).toFixed(2)}`, change: '+18.2%', icon: ShoppingCart },
-    { title: 'Proveedores', value: totalSuppliers.toString(), change: '+5.1%', icon: Truck },
-    { title: 'Clientes', value: totalCustomers.toString(), change: '+9.7%', icon: Users }
+    { title: 'Sucursales', value: totalBranches.toString(), change: '+2.0%', icon: Store },
+    { title: 'Ventas del día', value: `${totalSales}`, change: '+8.6%', icon: ShoppingCart },
+    { title: 'Monto del día', value: `S/. ${Number(salesToday._sum.total ?? 0).toFixed(2)}`, change: '+15.2%', icon: Users }
   ];
 
   return (
@@ -58,8 +61,8 @@ export default async function DashboardPage() {
               return (
                 <div key={sale.id} className="flex items-center justify-between rounded-2xl bg-slate-50 p-4">
                   <div>
-                    <p className="font-semibold text-slate-900">{firstItem?.product?.name ?? 'Venta'}</p>
-                    <p className="text-sm text-slate-500">{sale.customer?.name ?? 'Cliente'}</p>
+                    <p className="font-semibold text-slate-900">{firstItem?.product?.name ?? 'Venta realizada'}</p>
+                    <p className="text-sm text-slate-500">{sale.branch?.name ?? 'Sucursal'} • {sale.customer?.name ?? 'Cliente'}</p>
                   </div>
                   <div className="text-right">
                     <p className="font-semibold text-slate-900">S/. {Number(sale.total).toFixed(2)}</p>
@@ -74,20 +77,17 @@ export default async function DashboardPage() {
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-soft">
           <h2 className="text-xl font-bold text-slate-900">Alertas</h2>
           <div className="mt-6 space-y-4">
-            {[
-              { label: 'Stock bajo', value: '27 productos', tone: 'amber' },
-              { label: 'Vencimientos próximos', value: '14 lotes', tone: 'red' },
-              { label: 'Compras pendientes', value: '9 pedidos', tone: 'blue' }
-            ].map((alert) => (
-              <div key={alert.label} className="rounded-2xl bg-slate-50 p-4">
+            {lowStockItems.length > 0 ? lowStockItems.map((item) => (
+              <div key={item.id} className="rounded-2xl bg-slate-50 p-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-500">{alert.label}</span>
-                  <span className={`rounded-full px-2 py-1 text-xs font-semibold ${alert.tone === 'amber' ? 'bg-amber-100 text-amber-700' : alert.tone === 'red' ? 'bg-rose-100 text-rose-700' : 'bg-brand-100 text-brand-700'}`}>
-                    {alert.value}
-                  </span>
+                  <span className="text-sm text-slate-500">Stock bajo</span>
+                  <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700">{item.name}</span>
                 </div>
+                <div className="mt-2 text-sm text-slate-600">Quedan {item.stock} unidades</div>
               </div>
-            ))}
+            )) : (
+              <div className="rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-700">No hay alertas de stock bajo.</div>
+            )}
           </div>
         </div>
       </div>

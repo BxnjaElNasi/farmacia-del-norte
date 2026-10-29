@@ -1,4 +1,4 @@
-import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { requireSession } from '@/lib/session';
 import { DashboardShell } from '@/components/dashboard-shell';
@@ -9,9 +9,7 @@ export default async function ProductsPage() {
 
   const products = await prisma.product.findMany({
     orderBy: { createdAt: 'desc' },
-    include: {
-      supplier: true
-    }
+    include: { supplier: true }
   });
 
   return (
@@ -19,13 +17,13 @@ export default async function ProductsPage() {
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-soft">
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-xl font-bold text-slate-900">Catálogo de productos</h2>
-            <p className="text-sm text-slate-500">Consulta, edita y administra tu inventario farmacéutico.</p>
+            <h2 className="text-xl font-bold text-slate-900">Catálogo central</h2>
+            <p className="text-sm text-slate-500">Consulta y administra el catálogo de productos de Farmacia del Norte.</p>
           </div>
-          <button className="inline-flex items-center gap-2 rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white">
+          <Link href="/dashboard/products/new" className="inline-flex items-center gap-2 rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white">
             <PackageSearch size={16} />
             Nuevo producto
-          </button>
+          </Link>
         </div>
 
         <div className="overflow-x-auto">
@@ -39,7 +37,6 @@ export default async function ProductsPage() {
                 <th className="py-3 pr-6">Precio</th>
                 <th className="py-3 pr-6">Estado</th>
                 <th className="py-3 pr-6">Proveedor</th>
-                <th className="py-3 pr-6">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -56,12 +53,6 @@ export default async function ProductsPage() {
                     </span>
                   </td>
                   <td className="py-4 pr-6">{product.supplier?.name ?? 'Sin proveedor'}</td>
-                  <td className="py-4 pr-6">
-                    <div className="flex items-center gap-2">
-                      <button className="rounded-full border border-slate-200 p-2 text-slate-600 transition hover:border-brand-300 hover:text-brand-700"><Pencil size={14} /></button>
-                      <button className="rounded-full border border-slate-200 p-2 text-slate-600 transition hover:border-rose-300 hover:text-rose-700"><Trash2 size={14} /></button>
-                    </div>
-                  </td>
                 </tr>
               ))}
             </tbody>
