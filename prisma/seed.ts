@@ -1,9 +1,9 @@
 import { createHash } from 'crypto';
-import { Prisma, PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const productList: Array<{
+type ProductSeed = {
   sku: string;
   name: string;
   category: string;
@@ -12,8 +12,10 @@ const productList: Array<{
   cost: number;
   stock: number;
   minimum: number;
-  status: Prisma.ProductStatus;
-}> = [
+  status: 'ACTIVO' | 'INACTIVO' | 'BAJO_STOCK' | 'CRITICO';
+};
+
+const productList: ProductSeed[] = [
   {
     sku: 'PAR-500',
     name: 'Paracetamol 500mg',
