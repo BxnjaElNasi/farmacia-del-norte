@@ -3,6 +3,19 @@ import { createHash } from 'crypto';
 
 const prisma = new PrismaClient();
 
+type ProductSeed = {
+  sku: string;
+  name: string;
+  category: string;
+  description: string;
+  price: number;
+  cost: number;
+  stock: number;
+  minimum: number;
+  status: 'ACTIVO' | 'BAJO_STOCK' | 'CRITICO';
+  supplierId: string;
+};
+
 async function main() {
   const adminEmail = 'admin@farmacialdnorte.com';
   const adminPassword = '123456';
@@ -57,7 +70,7 @@ async function main() {
     }
   });
 
-  const products = [
+  const products: ProductSeed[] = [
     {
       sku: 'PAR-500',
       name: 'Paracetamol 500mg',
